@@ -19,6 +19,7 @@ services:
     environment:
       RAILS_ENV: ${ENVIRONMENT}
       DATABASE_URL: postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
@@ -33,6 +34,7 @@ services:
       context: ./pulmo-rehab-fe
     environment:
       PORT: 4200
+    restart: unless-stopped  
     ports:
       - "4200:4200"
     volumes:
