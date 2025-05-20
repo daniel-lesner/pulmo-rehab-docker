@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  rails:
+    build:
+      context: ./pulmo-rehab-api
+    env_file:
+      - .env
+    environment:
+      RAILS_ENV: ${ENVIRONMENT}
+      DATABASE_URL: postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../pulmo-rehab-api:/app
+    depends_on:
+      - db
+    working_dir: /app
+    command: bash -lc "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails s -b 0.0.0.0"
+
+  ember:
+    build:
+      context: ./pulmo-rehab-fe
+    environment:
+      PORT: 4200
+    ports:
+      - "4200:4200"
+    volumes:
+      - ../pulmo-rehab-fe:/app
+    depends_on:
+      - rails
+    working_dir: /app
+    command: sh -c "ember serve --host 0.0.0.0"
+
+volumes:
+  db-data:
