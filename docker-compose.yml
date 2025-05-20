@@ -23,7 +23,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ../pulmo-rehab-api:/app
+      - ./pulmo-rehab-api:/app
     depends_on:
       - db
     working_dir: /app
@@ -38,7 +38,7 @@ services:
     ports:
       - "4200:4200"
     volumes:
-      - ../pulmo-rehab-fe:/app
+      - ./pulmo-rehab-fe:/app
     depends_on:
       - rails
     working_dir: /app
