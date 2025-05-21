@@ -32,8 +32,11 @@ services:
   ember:
     build:
       context: ./pulmo-rehab-fe
+    env_file:
+      - .env
     environment:
       PORT: 4200
+      APP_ENV: ${ENVIRONMENT} 
     restart: unless-stopped  
     ports:
       - "4200:4200"
@@ -42,7 +45,7 @@ services:
     depends_on:
       - rails
     working_dir: /app
-    command: sh -c "ember serve --host 0.0.0.0"
+    command: sh -c "npm install && ember serve --host 0.0.0.0"
 
 volumes:
   db-data:
