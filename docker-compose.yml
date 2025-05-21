@@ -19,6 +19,7 @@ services:
     environment:
       RAILS_ENV: ${ENVIRONMENT}
       DATABASE_URL: postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -45,7 +46,16 @@ services:
     depends_on:
       - rails
     working_dir: /app
-    command: sh -c "npm install && ember serve --host 0.0.0.0"
+    command: >
+      sh -c "
+        if [ \"$${ENVIRONMENT}\" = 'production' ]; then
+          echo 'In production: skipping serve';
+          tail -f /dev/null;
+        else
+          echo 'In dev: installing and starting ember';
+          npm install && ember serve --host 0.0.0.0;
+        fi
+      "
 
 volumes:
   db-data:
