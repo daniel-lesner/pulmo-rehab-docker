@@ -11,6 +11,12 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   rails:
     build:
       context: ./pulmo-rehab-api
@@ -19,7 +25,9 @@ services:
     environment:
       RAILS_ENV: ${ENVIRONMENT}
       DATABASE_URL: postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
-      CORS_ORIGIN: ${CORS_ORIGIN}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      REDIS_URL: redis://redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -27,8 +35,34 @@ services:
       - ./pulmo-rehab-api:/app
     depends_on:
       - db
+      - redis
+      - elasticsearch
     working_dir: /app
-    command: bash -lc "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails s -b 0.0.0.0"
+    command: >
+      bash -lc "
+        rm -f tmp/pids/server.pid &&
+        bundle exec rails db:prepare &&
+        bundle exec rails s -b 0.0.0.0
+      "
+
+  sidekiq:
+    build:
+      context: ./pulmo-rehab-api
+    env_file:
+      - .env
+    environment:
+      RAILS_ENV: ${ENVIRONMENT}
+      REDIS_URL: redis://redis:6379/0
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    restart: unless-stopped
+    volumes:
+      - ./pulmo-rehab-api:/app
+    depends_on:
+      - redis
+      - db
+      - elasticsearch
+    working_dir: /app
+    command: bundle exec sidekiq -C config/sidekiq.yml
 
   ember:
     build:
@@ -37,8 +71,8 @@ services:
       - .env
     environment:
       PORT: 4200
-      APP_ENV: ${ENVIRONMENT} 
-    restart: unless-stopped  
+      APP_ENV: ${ENVIRONMENT}
+    restart: unless-stopped
     ports:
       - "4200:4200"
     volumes:
@@ -49,13 +83,19 @@ services:
     command: >
       sh -c "
         if [ \"$${ENVIRONMENT}\" = 'production' ]; then
-          echo 'In production: skipping serve';
           tail -f /dev/null;
         else
-          echo 'In dev: installing and starting ember';
           npm install && ember serve --host 0.0.0.0;
         fi
       "
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.1
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
 
 volumes:
   db-data:
